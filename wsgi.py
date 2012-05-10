@@ -3,6 +3,8 @@ import json
 import requests
 import bs4
 import cherrypy
+import redis
+
 
 def text_for_class(tag, css):
     """ BeautifulSoup helper returns the text of first element of class css in tag """
@@ -12,43 +14,78 @@ def text_for_class(tag, css):
     except IndexError:
         return None
 
-def query(lastname, location, initial=None):
-    """ returns the list of matches from the WhitePages for lastname and location
+class Query(object):
 
-    initial is optional and if set should be the first letter of the firstname
+    def __init__(self, cache=None):
+        self.cache = cache
 
-    >>> query('Kidd', 'Manly NSW')
-    [{'phone_number': u'(02) 9976 6759', 'state': u'NSW', 'postcode': u'2095', 'street_line': u'104 Pittwater Rd', 'locality': u'Manly'}, {'phone_number': u'(02) 9977 0795', 'state': u'NSW', 'postcode': u'2095', 'street_line': u'63 Pittwater Rd', 'locality': u'Manly'}, {'phone_number': u'(02) 9977 2809', 'state': u'NSW', 'postcode': u'2095', 'street_line': u'53 Quinton Rd', 'locality': u'Manly'}]
-    >>> query('Kidd', 'Manly NSW', 'E')
-    [{'phone_number': u'(02) 9976 6759', 'state': u'NSW', 'postcode': u'2095', 'street_line': u'104 Pittwater Rd', 'locality': u'Manly'}]
-    """
+    def __call__(self, lastname, location, initial=None):
+        """ returns the list of matches from the WhitePages for lastname and location
 
-    URL = "http://www.whitepages.com.au/resSearch.do"
-    payload = {
-            'subscriberName': lastname,
-            'givenName': initial,
-            'location': location
-            }
-    response = requests.get(URL, params=payload)
-    soup = bs4.BeautifulSoup(response.text)
-    blocks = soup.find_all('div', 'block')
-    result = []
-    for block in blocks:
-        result.append({
-            'street_line': text_for_class(block, 'street_line'),
-            'locality': text_for_class(block, 'locality'),
-            'state': text_for_class(block, 'state'),
-            'postcode': text_for_class(block, 'postcode'),
-            'phone_number': text_for_class(block, 'phone_number')
-            })
-    return result
+        initial is optional and if set should be the first letter of the firstname
+        >>> query = Query()
+        >>> query('Kidd', 'Manly NSW')
+        [{'phone_number': u'(02) 9976 6759', 'state': u'NSW', 'postcode': u'2095', 'street_line': u'104 Pittwater Rd', 'locality': u'Manly'}, {'phone_number': u'(02) 9977 0795', 'state': u'NSW', 'postcode': u'2095', 'street_line': u'63 Pittwater Rd', 'locality': u'Manly'}, {'phone_number': u'(02) 9977 2809', 'state': u'NSW', 'postcode': u'2095', 'street_line': u'53 Quinton Rd', 'locality': u'Manly'}]
+        >>> query('Kidd', 'Manly NSW', 'E')
+        [{'phone_number': u'(02) 9976 6759', 'state': u'NSW', 'postcode': u'2095', 'street_line': u'104 Pittwater Rd', 'locality': u'Manly'}]
+        """
+
+        URL = "http://www.whitepages.com.au/resSearch.do"
+        payload = {
+                'subscriberName': lastname,
+                'givenName': initial,
+                'location': location
+                }
+        hash_ = hash(frozenset(payload.items()))
+        try:
+            result = json.load(self.cache.get(hash_))
+        except AttributeError:
+            result = None
+        if result is None:
+            result = []
+            response = requests.get(URL, params=payload)
+            soup = bs4.BeautifulSoup(response.text)
+            blocks = soup.find_all('div', 'block')
+            for block in blocks:
+                result.append({
+                    'street_line': text_for_class(block, 'street_line'),
+                    'locality': text_for_class(block, 'locality'),
+                    'state': text_for_class(block, 'state'),
+                    'postcode': text_for_class(block, 'postcode'),
+                    'phone_number': text_for_class(block, 'phone_number')
+                    })
+            try:
+                # storing in cache for 30 days
+                self.cache.setex(hash_, 30 * 24 * 60 * 60, json.dumps(result))
+            except AttributeError:
+                pass
+
+        return result
+
+
+# using redis to cache the resul of whitepages queries
+try:
+    with open('/home/dotcloud/environment.json') as f:
+        environment = json.load(f)
+except IOError:
+    environment = { 'DOTCLOUD_CACHE_REDIS_HOST': 'localhost',
+                    'DOTCLOUD_CACHE_REDIS_PORT': 6379 }
+
+cache = redis.StrictRedis(host=environment['DOTCLOUD_CACHE_REDIS_HOST'],
+                          port=environment['DOTCLOUD_CACHE_REDIS_PORT'],
+                          db=0)
+if 'DOTCLOUD_CACHE_REDIS_PASSWORD' in environment:
+    cache.auth(environment['DOTCLOUD_CACHE_REDIS_PASSWORD'])
+
 
 class Albinos:
+
+    query = Query(cache)
 
     @cherrypy.expose
     def index(self):
         url = cherrypy.url()
-        json_ = json.dumps( query('Johnson', 'Bondi NSW' , 'M'),
+        json_ = json.dumps( self.query('Johnson', 'Bondi NSW' , 'M'),
                             sort_keys=True,
                             indent=4 )
         return """
@@ -70,7 +107,7 @@ class Albinos:
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def v1(self, lastname, location, initial=None):
-        return query(lastname, location, initial)
+        return self.query(lastname, location, initial)
 
 application  = cherrypy.tree.mount(Albinos())
 
