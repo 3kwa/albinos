@@ -39,7 +39,7 @@ class Query(object):
         hash_ = hash(frozenset(payload.items()))
         try:
             result = json.loads(self.cache.get(hash_))
-        except TypeError:
+        except (TypeError, AttributeError):
             result = None
         if result is None:
             result = []
