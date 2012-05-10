@@ -72,7 +72,7 @@ except IOError:
                     'DOTCLOUD_CACHE_REDIS_PORT': 6379 }
 
 cache = redis.StrictRedis(host=environment['DOTCLOUD_CACHE_REDIS_HOST'],
-                          port=environment['DOTCLOUD_CACHE_REDIS_PORT'],
+                          port=int(environment['DOTCLOUD_CACHE_REDIS_PORT']),
                           db=0)
 if 'DOTCLOUD_CACHE_REDIS_PASSWORD' in environment:
     cache.auth(environment['DOTCLOUD_CACHE_REDIS_PASSWORD'])
