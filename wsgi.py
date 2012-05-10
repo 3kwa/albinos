@@ -64,23 +64,22 @@ class Query(object):
 
 
 # using redis to cache the resul of whitepages queries
-#try:
-    #with open('/home/dotcloud/environment.json') as f:
-        #environment = json.load(f)
-#except IOError:
-    #environment = { 'DOTCLOUD_CACHE_REDIS_HOST': 'localhost',
-                    #'DOTCLOUD_CACHE_REDIS_PORT': 6379 }
+try:
+    with open('/home/dotcloud/environment.json') as f:
+        environment = json.load(f)
+except IOError:
+    environment = { 'DOTCLOUD_CACHE_REDIS_HOST': 'localhost',
+                    'DOTCLOUD_CACHE_REDIS_PORT': 6379,
+                    'DOTCLOUD_CACHE_REDIS_PASSWORD': None}
 
-#cache = redis.StrictRedis(host=environment['DOTCLOUD_CACHE_REDIS_HOST'],
-                          #port=int(environment['DOTCLOUD_CACHE_REDIS_PORT']),
-                          #db=0)
-#if 'DOTCLOUD_CACHE_REDIS_PASSWORD' in environment:
-    #cache.auth(environment['DOTCLOUD_CACHE_REDIS_PASSWORD'])
+cache = redis.StrictRedis(host=environment['DOTCLOUD_CACHE_REDIS_HOST'],
+                          port=int(environment['DOTCLOUD_CACHE_REDIS_PORT']),
+                          password=environment['DOTCLOUD_CACHE_REDIS_PASSWORD'])
 
 
 class Albinos:
 
-    query = Query()
+    query = Query(cache)
 
     @cherrypy.expose
     def index(self):
@@ -108,12 +107,6 @@ class Albinos:
     @cherrypy.tools.json_out()
     def v1(self, lastname, location, initial=None):
         return self.query(lastname, location, initial)
-
-    @cherrypy.expose
-    def env(self):
-        with open('/home/dotcloud/environment.json') as f:
-            environment = f.read()
-        return environment
 
 application  = cherrypy.tree.mount(Albinos())
 
