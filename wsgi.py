@@ -4,6 +4,7 @@ import requests
 import bs4
 import cherrypy
 import redis
+import pymongo
 
 from spot import Environment
 
@@ -69,6 +70,7 @@ environment = Environment()
 cache = redis.StrictRedis(host=environment.cache.host,
                           port=environment.cache.port,
                           password=environment.cache.password)
+mongo = pymongo.Connection(environment.mongo.url)
 
 class Albinos:
 

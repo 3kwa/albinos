@@ -15,10 +15,6 @@ class Redis:
 
 class Mongodb:
     """ common development parameters for MongoDB server """
-    host = u'localhost'
-    port = 22017
-    login = None
-    password = None
     url = None
 
 
