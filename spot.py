@@ -33,11 +33,11 @@ class Environment(object):
 
     def _load(self):
         try:
-            with open(self.dotcloud_yaml) as f:
-                self._yaml(f)
-        except IOError:
             with open(self.dotcloud_json) as f:
                 self._json(f)
+        except IOError:
+            with open(self.dotcloud_yaml) as f:
+                self._yaml(f)
 
     def _yaml(self, file_):
         """
