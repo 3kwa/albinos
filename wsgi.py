@@ -5,6 +5,7 @@ import bs4
 import cherrypy
 import redis
 
+from spot import Environment
 
 def text_for_class(tag, css):
     """ BeautifulSoup helper returns the text of first element of class css in tag """
@@ -64,17 +65,10 @@ class Query(object):
 
 
 # using redis to cache the resul of whitepages queries
-try:
-    with open('/home/dotcloud/environment.json') as f:
-        environment = json.load(f)
-except IOError:
-    environment = { 'DOTCLOUD_CACHE_REDIS_HOST': 'localhost',
-                    'DOTCLOUD_CACHE_REDIS_PORT': 6379,
-                    'DOTCLOUD_CACHE_REDIS_PASSWORD': None}
-
-cache = redis.StrictRedis(host=environment['DOTCLOUD_CACHE_REDIS_HOST'],
-                          port=int(environment['DOTCLOUD_CACHE_REDIS_PORT']),
-                          password=environment['DOTCLOUD_CACHE_REDIS_PASSWORD'])
+environment = Environment()
+cache = redis.StrictRedis(host=environment.cache.host,
+                          port=environment.cache.port,
+                          password=environment.cache.password)
 
 
 class Albinos:
@@ -107,6 +101,17 @@ class Albinos:
     @cherrypy.tools.json_out()
     def v1(self, lastname, location, initial=None):
         return self.query(lastname, location, initial)
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def environment(self):
+        return [ environment.cache.host,
+                 environment.cache.port,
+                 environment.cache.password,
+                 environment.mongo.host,
+                 environment.mongo.port,
+                 environment.mongo.login,
+                 environment.mongo.url ]
 
 application  = cherrypy.tree.mount(Albinos())
 

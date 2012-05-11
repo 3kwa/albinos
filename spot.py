@@ -8,9 +8,18 @@ import yaml
 
 
 class Redis:
+    """ common development parameters for Redis server """
     host = u'localhost'
     port = 6379
     password = None
+
+class Mongodb:
+    """ common development parameters for MongoDB server """
+    host = u'localhost'
+    port = 22017
+    login = None
+    password = None
+    url = None
 
 
 class Environment(object):
