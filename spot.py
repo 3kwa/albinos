@@ -61,7 +61,7 @@ class Environment(object):
         >>> import StringIO
         >>> f = StringIO.StringIO(
         ...     json.dumps({'DOTCLOUD_CACHE_REDIS_HOST': 'dotcloud',
-        ...                 'DOTCLOUD_CACHE_REDIS_PORT': 1234,
+        ...                 'DOTCLOUD_CACHE_REDIS_PORT': '1234',
         ...                 'DOTCLOUD_CACHE_REDIS_PASSWORD': 'secret' }))
         >>> env = Environment()
         >>> env._json(f)
@@ -96,6 +96,15 @@ class Environment(object):
         for service_name, service_property in services.items():
             service = self.dotcloud[service_name]
             for service_var, service_value in service_property.items():
+                try:
+                    man = getattr(service, service_var)
+                except AttributeError:
+                    # exposed in environment.json but not in service definition
+                    continue
+                else:
+                    # casting the type to the service definition type
+                    if man is not None:
+                        service_value = type(man)(service_value)
                 setattr(service, service_var, service_value)
 
     def __getattr__(self, name):
