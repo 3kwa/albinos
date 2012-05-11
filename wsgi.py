@@ -65,15 +65,15 @@ class Query(object):
 
 
 # using redis to cache the resul of whitepages queries
-#environment = Environment()
-#cache = redis.StrictRedis(host=environment.cache.host,
-                          #port=environment.cache.port,
-                          #password=environment.cache.password)
+environment = Environment()
+cache = redis.StrictRedis(host=environment.cache.host,
+                          port=environment.cache.port,
+                          password=environment.cache.password)
 
 
 class Albinos:
 
-    query = Query()
+    query = Query(cache)
 
     @cherrypy.expose
     def index(self):

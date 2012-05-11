@@ -62,7 +62,9 @@ class Environment(object):
         >>> f = StringIO.StringIO(
         ...     json.dumps({'DOTCLOUD_CACHE_REDIS_HOST': 'dotcloud',
         ...                 'DOTCLOUD_CACHE_REDIS_PORT': 1234,
-        ...                 'DOTCLOUD_CACHE_REDIS_PASSWORD': 'secret'}))
+        ...                 'DOTCLOUD_CACHE_REDIS_PASSWORD': 'secret',
+        ...                 'DOTCLOUD_MONGO_MONGODB_PASSWORD': 'secret',
+        ...                 'DOTCLOUD_WWW_HTTP_URL': 'url'}))
         >>> env = Environment()
         >>> env._json(f)
         >>> env.cache.host
@@ -76,10 +78,15 @@ class Environment(object):
         services  = {}
         for key,service_value in environment_json.items():
             ignore, service_name, service_type, service_var = key.lower().split('_')
+            # dynamically instantiating a class based on service_type
+            try:
+                self.dotcloud[service_name] = globals()[service_type.capitalize()]()
+            except KeyError:
+                # no service class for service_type
+                break
             man = services.setdefault(service_name, {})
             man[service_var] = service_value
-            # dynamically instantiating a class based on service_type
-            self.dotcloud[service_name] = globals()[service_type.capitalize()]()
+
         for service_name, service_property in services.items():
             service = self.dotcloud[service_name]
             for service_var, service_value in service_property.items():
