@@ -1,8 +1,10 @@
 import json
+import os.path
 
 import requests
 import bs4
 import cherrypy
+from cherrypy.lib.static import serve_file
 import redis
 import pymongo
 
@@ -103,10 +105,16 @@ class Albinos:
     def v1(self, lastname, location, initial=None):
         return self.query(lastname, location, initial)
 
+    cwd = os.path.dirname(os.path.abspath(__file__))
+
     @cherrypy.expose
-    @cherrypy.tools.staticfile(filename='/home/dotcloud/environment.json')
     def environment(self):
-        pass
+        return serve_file(Environment.environment_json)
+
+    @cherrypy.expose
+    def dotcloud(self):
+        return serve_file(os.path.join(self.cwd, 'dotcloud.yml'))
+
 
 application  = cherrypy.tree.mount(Albinos())
 
