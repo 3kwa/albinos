@@ -70,7 +70,6 @@ cache = redis.StrictRedis(host=environment.cache.host,
                           port=environment.cache.port,
                           password=environment.cache.password)
 
-
 class Albinos:
 
     query = Query(cache)

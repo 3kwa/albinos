@@ -25,7 +25,7 @@ class Mongodb:
 class Environment(object):
 
     dotcloud_yaml = 'dotcloud.yml'
-    dotcloud_json = '/home/dotcloud/environment.json'
+    environment_json = '/home/dotcloud/environment.json'
 
     def __init__(self):
         self.dotcloud = {}
@@ -33,7 +33,7 @@ class Environment(object):
 
     def _load(self):
         try:
-            with open(self.dotcloud_json) as f:
+            with open(self.environment_json) as f:
                 self._json(f)
         except IOError:
             with open(self.dotcloud_yaml) as f:
@@ -62,9 +62,7 @@ class Environment(object):
         >>> f = StringIO.StringIO(
         ...     json.dumps({'DOTCLOUD_CACHE_REDIS_HOST': 'dotcloud',
         ...                 'DOTCLOUD_CACHE_REDIS_PORT': 1234,
-        ...                 'DOTCLOUD_CACHE_REDIS_PASSWORD': 'secret',
-        ...                 'DOTCLOUD_MONGO_MONGODB_PASSWORD': 'secret',
-        ...                 'DOTCLOUD_WWW_HTTP_URL': 'url'}))
+        ...                 'DOTCLOUD_CACHE_REDIS_PASSWORD': 'secret' }))
         >>> env = Environment()
         >>> env._json(f)
         >>> env.cache.host
@@ -73,17 +71,25 @@ class Environment(object):
         1234
         >>> env.cache.password
         u'secret'
+        >>> f = StringIO.StringIO('{ "DOTCLOUD_WWW_HTTP_URL": "http://albinos-3kwa.dotcloud.com/", "DOTCLOUD_CACHE_REDIS_URL": "redis://root:kXM98OBWall4hRKFquGO@albinos-3kwa.dotcloud.com:28088", "DOTCLOUD_WWW_SSH_PORT": "28073", "DOTCLOUD_CACHE_SSH_URL": "ssh://redis@albinos-3kwa.dotcloud.com:28086", "DOTCLOUD_WWW_SSH_URL": "ssh://dotcloud@albinos-3kwa.dotcloud.com:28073", "DOTCLOUD_MONGO_SSH_HOST": "albinos-3kwa-mongo-0.dotcloud.com", "DOTCLOUD_WWW_SSH_HOST": "albinos-3kwa.dotcloud.com", "DOTCLOUD_CACHE_SSH_HOST": "albinos-3kwa.dotcloud.com", "DOTCLOUD_PROJECT": "albinos", "DOTCLOUD_SERVICE_NAME": "www", "DOTCLOUD_MONGO_SSH_PORT": "28161", "DOTCLOUD_CACHE_REDIS_PORT": "28088", "PORT_SSH": 22, "DOTCLOUD_WWW_HTTP_HOST": "albinos-3kwa.dotcloud.com", "PORT_HTTP": 80, "DOTCLOUD_ENVIRONMENT": "default", "DOTCLOUD_MONGO_MONGODB_PORT": "28162", "DOTCLOUD_MONGO_SSH_URL": "ssh://mongodb@albinos-3kwa-mongo-0.dotcloud.com:28161", "DOTCLOUD_CACHE_REDIS_HOST": "albinos-3kwa.dotcloud.com", "DOTCLOUD_MONGO_MONGODB_PASSWORD": "sCBUnzSxW0ej7D7kxZeD", "DOTCLOUD_MONGO_MONGODB_LOGIN": "root", "DOTCLOUD_MONGO_MONGODB_URL": "mongodb://root:sCBUnzSxW0ej7D7kxZeD@albinos-3kwa-mongo-0.dotcloud.com:28162", "DOTCLOUD_CACHE_REDIS_LOGIN": "root", "DOTCLOUD_CACHE_REDIS_PASSWORD": "kXM98OBWall4hRKFquGO", "DOTCLOUD_SERVICE_ID": "0", "DOTCLOUD_MONGO_MONGODB_HOST": "albinos-3kwa-mongo-0.dotcloud.com", "DOTCLOUD_CACHE_SSH_PORT": "28086" }')
+        >>> env._json(f)
+        >>> env.mongo.url
+        u'mongodb://root:sCBUnzSxW0ej7D7kxZeD@albinos-3kwa-mongo-0.dotcloud.com:28162'
         """
         environment_json = json.load(file_)
         services  = {}
         for key,service_value in environment_json.items():
-            ignore, service_name, service_type, service_var = key.lower().split('_')
+            try:
+                ignore, service_name, service_type, service_var = key.lower().split('_')
+            except ValueError:
+                # key not service related
+                continue
             # dynamically instantiating a class based on service_type
             try:
                 self.dotcloud[service_name] = globals()[service_type.capitalize()]()
             except KeyError:
                 # no service class for service_type
-                break
+                continue
             man = services.setdefault(service_name, {})
             man[service_var] = service_value
 
