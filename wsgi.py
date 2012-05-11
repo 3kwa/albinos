@@ -65,15 +65,15 @@ class Query(object):
 
 
 # using redis to cache the resul of whitepages queries
-environment = Environment()
-cache = redis.StrictRedis(host=environment.cache.host,
-                          port=environment.cache.port,
-                          password=environment.cache.password)
+#environment = Environment()
+#cache = redis.StrictRedis(host=environment.cache.host,
+                          #port=environment.cache.port,
+                          #password=environment.cache.password)
 
 
 class Albinos:
 
-    query = Query(cache)
+    query = Query()
 
     @cherrypy.expose
     def index(self):
@@ -101,6 +101,11 @@ class Albinos:
     @cherrypy.tools.json_out()
     def v1(self, lastname, location, initial=None):
         return self.query(lastname, location, initial)
+
+    @cherrypy.expose
+    @cherrypy.tools.staticfile(filename='/home/dotcloud/environment.json')
+    def environment(self):
+        pass
 
 application  = cherrypy.tree.mount(Albinos())
 
