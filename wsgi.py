@@ -6,9 +6,9 @@ import bs4
 import cherrypy
 from cherrypy.lib.static import serve_file
 import redis
-import pymongo
 
-from spot import Environment
+from spot import Dotcloud
+
 
 def text_for_class(tag, css):
     """ BeautifulSoup helper returns the text of first element of class css in tag """
@@ -41,10 +41,8 @@ class Query(object):
                 'location': location
                 }
         hash_ = hash(frozenset(payload.items()))
-        try:
-            result = json.loads(self.cache.get(hash_))
-        except (TypeError, AttributeError):
-            result = None
+
+        result = self.cache.get(hash_)
         if result is None:
             result = []
             response = requests.get(URL, params=payload)
@@ -58,21 +56,36 @@ class Query(object):
                     'postcode': text_for_class(block, 'postcode'),
                     'phone_number': text_for_class(block, 'phone_number')
                     })
-            try:
-                # storing in cache for 30 days
-                self.cache.setex(hash_, 30 * 24 * 60 * 60, json.dumps(result))
-            except AttributeError:
-                pass
+            self.cache.set(hash_, json.dumps(result))
 
         return result
 
+class Cache(object):
+    """ Redis basic caching for 30 days """
 
+    def __init__(self, redis, days=30):
+        self.redis =  redis
+        self.days=30
+
+    def set(self, key, value):
+        try:
+            self.redis.setex(key, self.days * 24 * 60 * 60, json.dumps(value))
+        except (AttributeError, redis.ConnectionError):
+            pass
+
+    def get(self, key):
+        try:
+            return json.loads(self.redis.get(key))
+        except (TypeError, AttributeError, redis.ConnectionError):
+            return None
+
+
+
+# spot.Dotcloud environment helper
+dotcloud = Dotcloud()
 # using redis to cache the resul of whitepages queries
-environment = Environment()
-cache = redis.StrictRedis(host=environment.cache.host,
-                          port=environment.cache.port,
-                          password=environment.cache.password)
-mongo = pymongo.Connection(environment.mongo.url)
+cache = Cache(dotcloud.cache.server)
+
 
 class Albinos:
 
@@ -109,7 +122,7 @@ class Albinos:
 
     @cherrypy.expose
     def environment(self):
-        return serve_file(Environment.environment_json)
+        return serve_file(Dotcloud.environment_json)
 
     @cherrypy.expose
     def dotcloud(self):
