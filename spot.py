@@ -1,24 +1,40 @@
-"""
-Simple DotCloud Environment loader
-"""
-
 import json
 
 import yaml
 
 
-class Redis:
-    """ common development parameters for Redis server """
+class Service:
+    """ Base class for Dotcloud services
+
+    Subclasses should define a method _server(self) for the property server
+    to call which return a connection to the service.
+    """
+    @property
+    def server(self):
+        return self._server()
+
+class Redis(Service):
+    """ Common development parameters for Redis server """
     host = u'localhost'
     port = 6379
     password = None
 
-class Mongodb:
-    """ common development parameters for MongoDB server """
+    def _server(self):
+        import redis
+        return redis.StrictRedis(host=self.host,
+                                 port=self.port,
+                                 password=self.password)
+
+class Mongodb(Service):
+    """ Common development parameters for MongoDB server """
     url = None
 
+    def _server(self):
+        import pymongo
+        return pymongo.Connection(self.url)
 
-class Environment(object):
+
+class Dotcloud(object):
 
     dotcloud_yaml = 'dotcloud.yml'
     environment_json = '/home/dotcloud/environment.json'
@@ -39,7 +55,7 @@ class Environment(object):
         """
         >>> import StringIO
         >>> f = StringIO.StringIO(yaml.dump({'cache': {'type': 'redis'}}))
-        >>> env = Environment()
+        >>> env = Dotcloud()
         >>> env._yaml(f)
         >>> env.cache.host
         u'localhost'
@@ -59,7 +75,7 @@ class Environment(object):
         ...     json.dumps({'DOTCLOUD_CACHE_REDIS_HOST': 'dotcloud',
         ...                 'DOTCLOUD_CACHE_REDIS_PORT': '1234',
         ...                 'DOTCLOUD_CACHE_REDIS_PASSWORD': 'secret' }))
-        >>> env = Environment()
+        >>> env = Dotcloud()
         >>> env._json(f)
         >>> env.cache.host
         u'dotcloud'
@@ -67,10 +83,10 @@ class Environment(object):
         1234
         >>> env.cache.password
         u'secret'
-        >>> f = StringIO.StringIO('{ "DOTCLOUD_WWW_HTTP_URL": "http://albinos-3kwa.dotcloud.com/", "DOTCLOUD_CACHE_REDIS_URL": "redis://root:kXM98OBWall4hRKFquGO@albinos-3kwa.dotcloud.com:28088", "DOTCLOUD_WWW_SSH_PORT": "28073", "DOTCLOUD_CACHE_SSH_URL": "ssh://redis@albinos-3kwa.dotcloud.com:28086", "DOTCLOUD_WWW_SSH_URL": "ssh://dotcloud@albinos-3kwa.dotcloud.com:28073", "DOTCLOUD_MONGO_SSH_HOST": "albinos-3kwa-mongo-0.dotcloud.com", "DOTCLOUD_WWW_SSH_HOST": "albinos-3kwa.dotcloud.com", "DOTCLOUD_CACHE_SSH_HOST": "albinos-3kwa.dotcloud.com", "DOTCLOUD_PROJECT": "albinos", "DOTCLOUD_SERVICE_NAME": "www", "DOTCLOUD_MONGO_SSH_PORT": "28161", "DOTCLOUD_CACHE_REDIS_PORT": "28088", "PORT_SSH": 22, "DOTCLOUD_WWW_HTTP_HOST": "albinos-3kwa.dotcloud.com", "PORT_HTTP": 80, "DOTCLOUD_ENVIRONMENT": "default", "DOTCLOUD_MONGO_MONGODB_PORT": "28162", "DOTCLOUD_MONGO_SSH_URL": "ssh://mongodb@albinos-3kwa-mongo-0.dotcloud.com:28161", "DOTCLOUD_CACHE_REDIS_HOST": "albinos-3kwa.dotcloud.com", "DOTCLOUD_MONGO_MONGODB_PASSWORD": "sCBUnzSxW0ej7D7kxZeD", "DOTCLOUD_MONGO_MONGODB_LOGIN": "root", "DOTCLOUD_MONGO_MONGODB_URL": "mongodb://root:sCBUnzSxW0ej7D7kxZeD@albinos-3kwa-mongo-0.dotcloud.com:28162", "DOTCLOUD_CACHE_REDIS_LOGIN": "root", "DOTCLOUD_CACHE_REDIS_PASSWORD": "kXM98OBWall4hRKFquGO", "DOTCLOUD_SERVICE_ID": "0", "DOTCLOUD_MONGO_MONGODB_HOST": "albinos-3kwa-mongo-0.dotcloud.com", "DOTCLOUD_CACHE_SSH_PORT": "28086" }')
+        >>> f = StringIO.StringIO(fixture)
         >>> env._json(f)
         >>> env.mongo.url
-        u'mongodb://root:sCBUnzSxW0ej7D7kxZeD@albinos-3kwa-mongo-0.dotcloud.com:28162'
+        u'mongodb://root:PASSWORD@albinos-3kwa-mongo-0.dotcloud.com:28162'
         """
         environment_json = json.load(file_)
         services  = {}
@@ -105,3 +121,32 @@ class Environment(object):
 
     def __getattr__(self, name):
         return self.dotcloud[name]
+
+fixture = """{
+"DOTCLOUD_WWW_HTTP_URL": "http://albinos-3kwa.dotcloud.com/", "DOTCLOUD_CACHE_REDIS_URL": "redis://root:PASSWORD@albinos-3kwa.dotcloud.com:28088",
+"DOTCLOUD_WWW_SSH_PORT": "28073",
+"DOTCLOUD_CACHE_SSH_URL": "ssh://redis@albinos-3kwa.dotcloud.com:28086",
+"DOTCLOUD_WWW_SSH_URL": "ssh://dotcloud@albinos-3kwa.dotcloud.com:28073",
+"DOTCLOUD_MONGO_SSH_HOST": "albinos-3kwa-mongo-0.dotcloud.com",
+"DOTCLOUD_WWW_SSH_HOST": "albinos-3kwa.dotcloud.com",
+"DOTCLOUD_CACHE_SSH_HOST": "albinos-3kwa.dotcloud.com",
+"DOTCLOUD_PROJECT": "albinos",
+"DOTCLOUD_SERVICE_NAME": "www",
+"DOTCLOUD_MONGO_SSH_PORT": "28161",
+"DOTCLOUD_CACHE_REDIS_PORT": "28088",
+"PORT_SSH": 22,
+"DOTCLOUD_WWW_HTTP_HOST": "albinos-3kwa.dotcloud.com",
+"PORT_HTTP": 80,
+"DOTCLOUD_ENVIRONMENT": "default",
+"DOTCLOUD_MONGO_MONGODB_PORT": "28162",
+"DOTCLOUD_MONGO_SSH_URL": "ssh://mongodb@albinos-3kwa-mongo-0.dotcloud.com:28161",
+"DOTCLOUD_CACHE_REDIS_HOST": "albinos-3kwa.dotcloud.com",
+"DOTCLOUD_MONGO_MONGODB_PASSWORD": "PASSWORD",
+"DOTCLOUD_MONGO_MONGODB_LOGIN": "root",
+"DOTCLOUD_MONGO_MONGODB_URL": "mongodb://root:PASSWORD@albinos-3kwa-mongo-0.dotcloud.com:28162",
+"DOTCLOUD_CACHE_REDIS_LOGIN": "root",
+"DOTCLOUD_CACHE_REDIS_PASSWORD": "PASSWORD",
+"DOTCLOUD_SERVICE_ID": "0",
+"DOTCLOUD_MONGO_MONGODB_HOST": "albinos-3kwa-mongo-0.dotcloud.com",
+"DOTCLOUD_CACHE_SSH_PORT": "28086"
+}"""
