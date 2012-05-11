@@ -102,17 +102,6 @@ class Albinos:
     def v1(self, lastname, location, initial=None):
         return self.query(lastname, location, initial)
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def environment(self):
-        return [ environment.cache.host,
-                 environment.cache.port,
-                 environment.cache.password,
-                 environment.mongo.host,
-                 environment.mongo.port,
-                 environment.mongo.login,
-                 environment.mongo.url ]
-
 application  = cherrypy.tree.mount(Albinos())
 
 if __name__ == '__main__':
