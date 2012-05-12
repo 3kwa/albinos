@@ -35,6 +35,12 @@ class Mongodb(Service):
 
 
 class Dotcloud(object):
+    """ Developement/Dotcloud service parameters 'abstraction' layer
+
+    >>> dotcloud = Dotcloud()
+    >>> isinstance(dotcloud.cache, Redis)
+    True
+    """
 
     dotcloud_yaml = 'dotcloud.yml'
     environment_json = '/home/dotcloud/environment.json'
@@ -44,10 +50,13 @@ class Dotcloud(object):
         self._load()
 
     def _load(self):
+        """ Load the service parameters """
         try:
+            # are we on dotcloud?
             with open(self.environment_json) as f:
                 self._json(f)
         except IOError:
+            # are we on development
             with open(self.dotcloud_yaml) as f:
                 self._yaml(f)
 
@@ -123,7 +132,8 @@ class Dotcloud(object):
         return self.dotcloud[name]
 
 fixture = """{
-"DOTCLOUD_WWW_HTTP_URL": "http://albinos-3kwa.dotcloud.com/", "DOTCLOUD_CACHE_REDIS_URL": "redis://root:PASSWORD@albinos-3kwa.dotcloud.com:28088",
+"DOTCLOUD_WWW_HTTP_URL": "http://albinos-3kwa.dotcloud.com/",
+"DOTCLOUD_CACHE_REDIS_URL": "redis://root:PASSWORD@albinos-3kwa.dotcloud.com:28088",
 "DOTCLOUD_WWW_SSH_PORT": "28073",
 "DOTCLOUD_CACHE_SSH_URL": "ssh://redis@albinos-3kwa.dotcloud.com:28086",
 "DOTCLOUD_WWW_SSH_URL": "ssh://dotcloud@albinos-3kwa.dotcloud.com:28073",
