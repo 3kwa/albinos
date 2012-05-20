@@ -3,6 +3,5 @@ beautifulsoup4==4.0.5
 requests==0.12.1
 redis==2.4.12
 hiredis==0.1.1
-PyYAML==3.10
 pymongo==2.2
-git+https://github.com/3kwa/spot.git
+spot>=0.1a
