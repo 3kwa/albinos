@@ -5,3 +5,4 @@ redis==2.4.12
 hiredis==0.1.1
 PyYAML==3.10
 pymongo==2.2
+git+https://github.com/3kwa/spot.git
